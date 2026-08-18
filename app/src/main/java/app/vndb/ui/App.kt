@@ -95,38 +95,41 @@ fun VndbApp(container: AppContainer, initialRoute: AppRoute? = null) {
                 WindowInsets.navigationBars.getBottom(this).toDp()
             }
             val clearance = 64.dp + 12.dp + navBottom
-            Box(Modifier.fillMaxSize()) {
-                CompositionLocalProvider(LocalBottomBarClearance provides clearance) {
-                    Box(
-                        Modifier
-                            .matchParentSize()
-                            .layerBackdrop(backdrop),
-                    ) {
-                        AppScreens(container, settings, route, ::push, ::pop)
+            // Keep overlays above both the backdrop layer and the floating bottom bar.
+            Scaffold(modifier = Modifier.fillMaxSize()) {
+                Box(Modifier.fillMaxSize()) {
+                    CompositionLocalProvider(LocalBottomBarClearance provides clearance) {
+                        Box(
+                            Modifier
+                                .matchParentSize()
+                                .layerBackdrop(backdrop),
+                        ) {
+                            AppScreens(container, settings, route, ::push, ::pop)
+                        }
                     }
-                }
-                FloatingBottomBar(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = 16.dp)
-                        .navigationBarsPadding()
-                        .padding(bottom = 12.dp),
-                    selectedIndex = { selectedTab.ordinal },
-                    onSelected = { push(MainTab.entries[it].toRoute()) },
-                    backdrop = backdrop,
-                    tabsCount = 4,
-                    mode = FloatingBottomBarMode.LiquidGlass,
-                ) {
-                    MainTab.entries.forEach { tab ->
-                        FloatingBottomBarItem(onClick = { push(tab.toRoute()) }) {
-                            val tint = LocalFloatingBottomBarContentColor.current
-                            Icon(
-                                imageVector = tab.icon(),
-                                contentDescription = tab.label,
-                                tint = tint,
-                                modifier = Modifier.size(26.dp),
-                            )
-                            Text(tab.label, color = tint, style = MiuixTheme.textStyles.footnote2)
+                    FloatingBottomBar(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(horizontal = 16.dp)
+                            .navigationBarsPadding()
+                            .padding(bottom = 12.dp),
+                        selectedIndex = { selectedTab.ordinal },
+                        onSelected = { push(MainTab.entries[it].toRoute()) },
+                        backdrop = backdrop,
+                        tabsCount = 4,
+                        mode = FloatingBottomBarMode.LiquidGlass,
+                    ) {
+                        MainTab.entries.forEach { tab ->
+                            FloatingBottomBarItem(onClick = { push(tab.toRoute()) }) {
+                                val tint = LocalFloatingBottomBarContentColor.current
+                                Icon(
+                                    imageVector = tab.icon(),
+                                    contentDescription = tab.label,
+                                    tint = tint,
+                                    modifier = Modifier.size(26.dp),
+                                )
+                                Text(tab.label, color = tint, style = MiuixTheme.textStyles.footnote2)
+                            }
                         }
                     }
                 }
