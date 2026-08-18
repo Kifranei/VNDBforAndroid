@@ -4,7 +4,7 @@
 
 数据来自 [VNDB API v2 (Kana)](https://api.vndb.org/kana)。
 
-本项目以 [Apache License 2.0](LICENSE) 授权。VNDB 条目数据遵循 [VNDB Data License](https://vndb.org/d7)。液态玻璃底栏效果源自 [Kyant Backdrop](https://github.com/Kyant0/AndroidLiquidGlass) / bangumi 的移植。
+本项目以 [Apache License 2.0](LICENSE) 授权。VNDB 条目数据遵循 [VNDB Data License](https://vndb.org/d7)。
 
 ## 功能
 

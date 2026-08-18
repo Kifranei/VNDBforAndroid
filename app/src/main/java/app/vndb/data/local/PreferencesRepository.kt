@@ -131,6 +131,20 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
+    suspend fun removeHistory(item: FavoriteItem) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[HISTORY]
+                ?.let { runCatching { json.decodeFromString<List<FavoriteItem>>(it) }.getOrNull() }
+                .orEmpty()
+                .filterNot { it.id == item.id && it.type == item.type }
+            prefs[HISTORY] = json.encodeToString(current)
+        }
+    }
+
+    suspend fun clearHistory() {
+        context.dataStore.edit { it[HISTORY] = json.encodeToString(emptyList<FavoriteItem>()) }
+    }
+
     companion object {
         private val COLOR_MODE = intPreferencesKey("color_mode")
         private val TITLE_PREF = intPreferencesKey("title_pref")

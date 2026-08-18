@@ -37,11 +37,11 @@ fun VisualNovel.displaySubtitle(pref: TitlePreference): String? {
     return candidates.firstOrNull()
 }
 
-fun VndbImage?.visibleUrl(policy: NsfwPolicy): String? {
+fun VndbImage?.visibleUrl(policy: NsfwPolicy, preferFull: Boolean = false): String? {
     if (this == null) return null
     val sexual = sexual ?: 0.0
     if (policy == NsfwPolicy.HIDE && sexual >= 1.0) return null
-    return thumbnail ?: url
+    return if (preferFull) url ?: thumbnail else thumbnail ?: url
 }
 
 fun formatRating(rating: Double?): String {

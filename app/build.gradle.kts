@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -17,13 +19,36 @@ android {
         vectorDrawables.useSupportLibrary = true
     }
 
+    signingConfigs {
+        create("release") {
+            val localProps = Properties()
+            val localFile = rootProject.file("local.properties")
+            if (localFile.exists()) {
+                localFile.inputStream().use { localProps.load(it) }
+            }
+            fun secret(key: String, env: String, fallback: String = "") =
+                localProps.getProperty(key) ?: System.getenv(env) ?: fallback
+
+            storeFile = file(secret("RELEASE_STORE_FILE", "RELEASE_STORE_FILE", "$rootDir/release.jks"))
+            storePassword = secret("RELEASE_STORE_PASSWORD", "RELEASE_STORE_PASSWORD")
+            keyAlias = secret("RELEASE_KEY_ALIAS", "RELEASE_KEY_ALIAS")
+            keyPassword = secret("RELEASE_KEY_PASSWORD", "RELEASE_KEY_PASSWORD")
+            enableV3Signing = true
+            enableV4Signing = true
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

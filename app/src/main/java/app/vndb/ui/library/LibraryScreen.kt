@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -37,11 +38,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TabRow
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Delete
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 data class LibraryUiState(
     val local: List<FavoriteItem> = emptyList(),
@@ -88,6 +102,14 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
             }
         }
     }
+
+    fun removeHistory(item: FavoriteItem) {
+        viewModelScope.launch { container.preferences.removeHistory(item) }
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch { container.preferences.clearHistory() }
+    }
 }
 
 @Composable
@@ -98,14 +120,32 @@ fun LibraryScreen(
 ) {
     val vm: LibraryViewModel = viewModel(factory = vmFactory { LibraryViewModel(container) })
     val state by vm.state.collectAsStateWithLifecycle()
-    var tab by remember { mutableIntStateOf(0) }
+    var tab by remember { mutableIntStateOf(2) }
+    var confirmClear by remember { mutableStateOf(false) }
     val scroll = MiuixScrollBehavior()
     val tabs = listOf("本地收藏", "浏览记录", "VNDB 列表")
     val barClearance = LocalBottomBarClearance.current
 
     Scaffold(
         contentWindowInsets = tabContentWindowInsets(),
-        topBar = { TopAppBar(title = "收藏", largeTitle = "收藏", scrollBehavior = scroll) },
+        topBar = {
+            TopAppBar(
+                title = "收藏",
+                largeTitle = "收藏",
+                scrollBehavior = scroll,
+                actions = {
+                    if (tab == 1 && state.history.isNotEmpty()) {
+                        IconButton(onClick = { confirmClear = true }) {
+                            Icon(
+                                imageVector = MiuixIcons.Delete,
+                                contentDescription = "清空浏览记录",
+                                tint = MiuixTheme.colorScheme.onBackground,
+                            )
+                        }
+                    }
+                },
+            )
+        },
     ) { padding ->
         Column(
             Modifier
@@ -120,7 +160,13 @@ fun LibraryScreen(
             )
             when (tab) {
                 0 -> FavoriteList(state.local, onOpen, Modifier.weight(1f).nestedScroll(scroll.nestedScrollConnection), padding.calculateBottomPadding() + barClearance)
-                1 -> FavoriteList(state.history, onOpen, Modifier.weight(1f).nestedScroll(scroll.nestedScrollConnection), padding.calculateBottomPadding() + barClearance)
+                1 -> FavoriteList(
+                    items = state.history,
+                    onOpen = onOpen,
+                    modifier = Modifier.weight(1f).nestedScroll(scroll.nestedScrollConnection),
+                    bottom = padding.calculateBottomPadding() + barClearance,
+                    onRemove = vm::removeHistory,
+                )
                 else -> {
                     if (settings.userId.isBlank()) {
                         EmptyState("在设置里填入 API Token 后可同步 VNDB 列表", Modifier.weight(1f))
@@ -129,7 +175,7 @@ fun LibraryScreen(
                     } else if (state.error != null) {
                         ErrorState(state.error ?: "", onRetry = { vm.refreshRemote() }, Modifier.weight(1f))
                     } else {
-                        val labels = listOf("全部") + state.labels.map { "${ulistLabelName(it.id, it.label)} (${it.count ?: 0})" }
+                        val labels = listOf("全部") + state.labels.map { ulistLabelName(it.id, it.label) }
                         val selected = if (state.selectedLabel == null) 0 else state.labels.indexOfFirst { it.id == state.selectedLabel } + 1
                         LazyColumn(
                             modifier = Modifier.weight(1f).nestedScroll(scroll.nestedScrollConnection),
@@ -142,6 +188,8 @@ fun LibraryScreen(
                                     onTabSelected = { index ->
                                         vm.refreshRemote(if (index == 0) null else state.labels.getOrNull(index - 1)?.id)
                                     },
+                                    minWidth = 88.dp,
+                                    maxWidth = 160.dp,
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                 )
                             }
@@ -160,6 +208,34 @@ fun LibraryScreen(
             }
         }
     }
+
+    OverlayDialog(
+        show = confirmClear,
+        title = "清空浏览记录",
+        summary = "将删除全部 ${state.history.size} 条记录，此操作无法撤销。",
+        onDismissRequest = { confirmClear = false },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            TextButton(
+                text = "取消",
+                onClick = { confirmClear = false },
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(20.dp))
+            TextButton(
+                text = "清空",
+                onClick = {
+                    vm.clearHistory()
+                    confirmClear = false
+                },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
+        }
+    }
 }
 
 @Composable
@@ -168,6 +244,7 @@ private fun FavoriteList(
     onOpen: (AppRoute) -> Unit,
     modifier: Modifier,
     bottom: androidx.compose.ui.unit.Dp,
+    onRemove: ((FavoriteItem) -> Unit)? = null,
 ) {
     if (items.isEmpty()) {
         EmptyState("还没有内容", modifier)
@@ -175,21 +252,33 @@ private fun FavoriteList(
     }
     LazyColumn(modifier = modifier, contentPadding = PaddingValues(bottom = bottom + 8.dp)) {
         items(items, key = { it.type + it.id }) { item ->
-            Card(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                onClick = {
-                    onOpen(
-                        when (item.type) {
-                            "character" -> AppRoute.Character(item.id)
-                            "producer" -> AppRoute.Producer(item.id)
-                            "staff" -> AppRoute.Staff(item.id)
-                            "tag" -> AppRoute.Tag(item.id)
-                            else -> AppRoute.Vn(item.id)
-                        },
-                    )
-                },
-            ) {
-                BasicComponent(title = item.title, summary = item.subtitle ?: item.id)
+            Card(modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)) {
+                BasicComponent(
+                    title = item.title,
+                    summary = item.subtitle ?: item.id,
+                    onClick = {
+                        onOpen(
+                            when (item.type) {
+                                "character" -> AppRoute.Character(item.id)
+                                "producer" -> AppRoute.Producer(item.id)
+                                "staff" -> AppRoute.Staff(item.id)
+                                "tag" -> AppRoute.Tag(item.id)
+                                else -> AppRoute.Vn(item.id)
+                            },
+                        )
+                    },
+                    endActions = {
+                        if (onRemove != null) {
+                            IconButton(onClick = { onRemove(item) }) {
+                                Icon(
+                                    imageVector = MiuixIcons.Delete,
+                                    contentDescription = "删除这条记录",
+                                    tint = MiuixTheme.colorScheme.onSurfaceSecondary,
+                                )
+                            }
+                        }
+                    },
+                )
             }
         }
     }

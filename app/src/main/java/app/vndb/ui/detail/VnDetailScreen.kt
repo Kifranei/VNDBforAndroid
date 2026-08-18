@@ -15,10 +15,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -80,6 +82,7 @@ import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
 import top.yukonga.miuix.kmp.icon.extended.Edit
+import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
@@ -96,6 +99,9 @@ data class VnDetailState(
     val ulist: UlistEntry? = null,
     val listSaving: Boolean = false,
     val listMessage: String? = null,
+    val listIndex: Int = 0,
+    val listOffset: Int = 0,
+    val pageTab: Int = 0,
 )
 
 class VnDetailViewModel(
@@ -135,6 +141,14 @@ class VnDetailViewModel(
                 _state.update { it.copy(loading = false, error = e.message ?: "加载失败") }
             }
         }
+    }
+
+    fun saveScroll(index: Int, offset: Int) {
+        _state.update { it.copy(listIndex = index, listOffset = offset) }
+    }
+
+    fun saveTab(tab: Int) {
+        _state.update { it.copy(pageTab = tab) }
     }
 
     fun toggleFavorite() {
@@ -182,8 +196,14 @@ fun VnDetailScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val scroll = MiuixScrollBehavior()
     val uri = LocalUriHandler.current
-    var tab by remember { mutableStateOf(0) }
+    var tab by remember { mutableStateOf(state.pageTab) }
     var showList by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState(state.listIndex, state.listOffset)
+
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) -> vm.saveScroll(index, offset) }
+    }
 
     Scaffold(
         topBar = {
@@ -219,6 +239,7 @@ fun VnDetailScreen(
             else -> {
                 val vn = state.vn ?: return@Scaffold
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         .nestedScroll(scroll.nestedScrollConnection),
@@ -234,7 +255,10 @@ fun VnDetailScreen(
                         TabRow(
                             tabs = listOf("简介", "角色", "发行", "相关"),
                             selectedTabIndex = tab,
-                            onTabSelected = { tab = it },
+                            onTabSelected = {
+                                tab = it
+                                vm.saveTab(it)
+                            },
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         )
                     }
@@ -339,7 +363,7 @@ private fun Overview(vn: VisualNovel, settings: UserSettings, onOpen: (AppRoute)
                 Text(desc, style = MiuixTheme.textStyles.paragraph)
             }
         }
-        val shots = vn.screenshots.mapNotNull { it.visibleUrl(settings.nsfwPolicy) }
+        val shots = vn.screenshots.mapNotNull { it.visibleUrl(settings.nsfwPolicy, preferFull = true) }
         if (shots.isNotEmpty()) {
             SmallTitle("截图")
             LazyRow(
@@ -484,6 +508,18 @@ private fun UlistSheet(
         show = show,
         title = "同步到 VNDB 列表",
         onDismissRequest = onDismiss,
+        endAction = {
+            IconButton(
+                onClick = {
+                    val vote = if (voteIndex == 0) null else (11 - voteIndex) * 10
+                    onSave(vote, selected.toList(), current?.notes)
+                    onDismiss()
+                },
+                enabled = !state.listSaving,
+            ) {
+                Icon(MiuixIcons.Ok, contentDescription = "保存", tint = MiuixTheme.colorScheme.primary)
+            }
+        },
     ) {
         Column {
             Card(Modifier.padding(12.dp)) {
@@ -507,16 +543,6 @@ private fun UlistSheet(
             state.listMessage?.let {
                 Text(it, modifier = Modifier.padding(horizontal = 16.dp), color = MiuixTheme.colorScheme.primary)
             }
-            Text(
-                if (state.listSaving) "保存中…" else "保存",
-                color = MiuixTheme.colorScheme.primary,
-                modifier = Modifier
-                    .padding(16.dp)
-                    .clickable(enabled = !state.listSaving) {
-                        val vote = if (voteIndex == 0) null else (11 - voteIndex) * 10
-                        onSave(vote, selected.toList(), current?.notes)
-                    },
-            )
         }
     }
 }

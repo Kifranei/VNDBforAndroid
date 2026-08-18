@@ -55,12 +55,16 @@ import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SearchBar
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -225,20 +229,7 @@ fun SearchScreen(
                         color = MiuixTheme.colorScheme.primary,
                     )
                 },
-            ) {
-                Column {
-                    listOf("Clannad", "Steins;Gate", "Fate", "White Album").forEach { hint ->
-                        BasicComponent(
-                            title = hint,
-                            onClick = {
-                                vm.onQueryChange(hint)
-                                expanded = false
-                                vm.submit()
-                            },
-                        )
-                    }
-                }
-            }
+            ) {}
 
             TabRow(
                 tabs = SearchKind.entries.map { it.label },
@@ -347,6 +338,11 @@ private fun FilterSheet(
         show = show,
         title = "作品筛选",
         onDismissRequest = onDismiss,
+        endAction = {
+            IconButton(onClick = { onApply(draft) }) {
+                Icon(MiuixIcons.Ok, contentDescription = "应用", tint = MiuixTheme.colorScheme.primary)
+            }
+        },
     ) {
         Column {
             SmallTitle("对应 VNDB POST /vn 的 filters / sort")
@@ -410,13 +406,6 @@ private fun FilterSheet(
                     summary = "has_description = 1",
                 )
             }
-            Text(
-                "应用",
-                color = MiuixTheme.colorScheme.primary,
-                modifier = Modifier
-                    .padding(16.dp)
-                    .clickable { onApply(draft) },
-            )
         }
     }
 }

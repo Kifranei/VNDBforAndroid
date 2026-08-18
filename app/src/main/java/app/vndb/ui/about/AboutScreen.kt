@@ -157,7 +157,7 @@ private fun AboutContent(
                             Modifier
                         },
                     ),
-                text = "VNDB",
+                text = "VNDB for Android",
                 color = colorScheme.onBackground,
                 fontWeight = FontWeight.Bold,
                 fontSize = 35.sp,
@@ -192,6 +192,11 @@ private fun AboutContent(
             item {
                 SmallTitle(text = "项目")
                 FrostedCard(backdrop, blurEnable, cardBlendColors, scrollProgress) {
+                    BasicComponent(
+                        title = "GitHub",
+                        summary = "https://github.com/Kifranei/VNDBforAndroid",
+                        onClick = { uriHandler.openUri("https://github.com/Kifranei/VNDBforAndroid") },
+                    )
                     BasicComponent(
                         title = "VNDB API v2 (Kana)",
                         summary = "https://api.vndb.org/kana",

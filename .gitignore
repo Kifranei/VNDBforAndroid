@@ -12,5 +12,6 @@
 *.ap_
 *.aab
 *.keystore
+*.jks
 .kotlin
 _vndb_api.txt
