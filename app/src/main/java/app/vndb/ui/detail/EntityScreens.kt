@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -32,7 +33,10 @@ import app.vndb.ui.components.CoverImage
 import app.vndb.ui.components.ErrorState
 import app.vndb.ui.components.InfoChip
 import app.vndb.ui.components.LoadingBox
+import app.vndb.ui.components.ProgressiveBlurTopBar
 import app.vndb.ui.components.VnRowCard
+import app.vndb.ui.components.progressiveBlurSource
+import app.vndb.ui.components.rememberProgressiveBlurBackdrop
 import app.vndb.ui.nav.AppRoute
 import app.vndb.ui.vmFactory
 import app.vndb.util.formatBirthday
@@ -55,6 +59,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import app.vndb.ui.nav.sides
 
 private class SimpleState<T>(
     val loading: Boolean = true,
@@ -350,17 +355,21 @@ private fun <T> EntityScaffold(
     content: androidx.compose.foundation.lazy.LazyListScope.(T) -> Unit,
 ) {
     val scroll = MiuixScrollBehavior()
+    val blurBackdrop = rememberProgressiveBlurBackdrop()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = title,
-                scrollBehavior = scroll,
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(MiuixIcons.Back, contentDescription = "返回")
-                    }
-                },
-            )
+            ProgressiveBlurTopBar(blurBackdrop) {
+                TopAppBar(
+                    title = title,
+                    color = Color.Transparent,
+                    scrollBehavior = scroll,
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(MiuixIcons.Back, contentDescription = "返回")
+                        }
+                    },
+                )
+            }
         },
     ) { padding ->
         when {
@@ -370,6 +379,8 @@ private fun <T> EntityScaffold(
             else -> LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
+                    .progressiveBlurSource(blurBackdrop)
+                    .padding(padding.sides())
                     .nestedScroll(scroll.nestedScrollConnection),
                 contentPadding = PaddingValues(
                     top = padding.calculateTopPadding(),

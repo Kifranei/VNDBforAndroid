@@ -3,6 +3,8 @@ package app.vndb.ui.about
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +30,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -75,6 +78,7 @@ fun AboutScreen(onBack: () -> Unit) {
         }
     }
 
+    val layoutDirection = LocalLayoutDirection.current
     Scaffold(
         topBar = {
             SmallTopAppBar(
@@ -91,7 +95,12 @@ fun AboutScreen(onBack: () -> Unit) {
         },
     ) { innerPadding ->
         AboutContent(
-            padding = PaddingValues(top = innerPadding.calculateTopPadding()),
+            // Keep the side insets so landscape content clears the display cutout and side navigation bar.
+            padding = PaddingValues(
+                start = innerPadding.calculateStartPadding(layoutDirection),
+                top = innerPadding.calculateTopPadding(),
+                end = innerPadding.calculateEndPadding(layoutDirection),
+            ),
             scrollBehavior = scrollBehavior,
             scrollProgress = scrollProgress,
             lazyListState = lazyListState,
@@ -113,6 +122,7 @@ private fun AboutContent(
     val blurEnable by remember { mutableStateOf(isRenderEffectSupported()) }
     val uriHandler = LocalUriHandler.current
     val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
     var logoHeightDp by remember { mutableStateOf(300.dp) }
     val logoLiftPx = with(density) { 96.dp.toPx() }
     val heroTopPadding = 148.dp
@@ -135,7 +145,11 @@ private fun AboutContent(
                     alpha = (1f - scrollProgress * 1.35f).coerceIn(0f, 1f)
                     translationY = -logoLiftPx * scrollProgress
                 }
-                .padding(top = padding.calculateTopPadding() + heroTopPadding)
+                .padding(
+                    start = padding.calculateStartPadding(layoutDirection),
+                    top = padding.calculateTopPadding() + heroTopPadding,
+                    end = padding.calculateEndPadding(layoutDirection),
+                )
                 .onSizeChanged { size -> with(density) { logoHeightDp = size.height.toDp() } },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -178,7 +192,11 @@ private fun AboutContent(
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(top = padding.calculateTopPadding()),
+            contentPadding = PaddingValues(
+                start = padding.calculateStartPadding(layoutDirection),
+                top = padding.calculateTopPadding(),
+                end = padding.calculateEndPadding(layoutDirection),
+            ),
             overscrollEffect = null,
         ) {
             item(key = "logoSpacer") {

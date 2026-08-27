@@ -14,8 +14,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
+import app.vndb.ui.components.ProgressiveBlurTopBar
+import app.vndb.ui.components.progressiveBlurSource
+import app.vndb.ui.components.rememberProgressiveBlurBackdrop
 import app.vndb.ui.nav.LocalBottomBarClearance
 import app.vndb.ui.nav.tabContentWindowInsets
 import androidx.lifecycle.ViewModel
@@ -52,6 +56,7 @@ import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.ChevronForward
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import app.vndb.ui.nav.sides
 
 data class DiscoverUiState(
     val loading: Boolean = true,
@@ -112,14 +117,18 @@ fun DiscoverScreen(
     val pull = rememberPullToRefreshState()
 
     val barClearance = LocalBottomBarClearance.current
+    val blurBackdrop = rememberProgressiveBlurBackdrop()
     Scaffold(
         contentWindowInsets = tabContentWindowInsets(),
         topBar = {
-            TopAppBar(
-                title = "发现",
-                largeTitle = "发现",
-                scrollBehavior = scroll,
-            )
+            ProgressiveBlurTopBar(blurBackdrop) {
+                TopAppBar(
+                    title = "发现",
+                    largeTitle = "发现",
+                    color = Color.Transparent,
+                    scrollBehavior = scroll,
+                )
+            }
         },
     ) { padding ->
         when {
@@ -138,6 +147,8 @@ fun DiscoverScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
+                            .progressiveBlurSource(blurBackdrop)
+                            .padding(padding.sides())
                             .nestedScroll(scroll.nestedScrollConnection),
                         contentPadding = PaddingValues(
                             top = padding.calculateTopPadding(),

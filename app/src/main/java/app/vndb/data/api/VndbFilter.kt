@@ -1,5 +1,6 @@
 package app.vndb.data.api
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encoding.Decoder
@@ -106,8 +107,9 @@ data class VndbQuery(
     val fields: String = "",
     val sort: String? = null,
     val reverse: Boolean? = null,
-    val results: Int = 20,
-    val page: Int = 1,
+    // encodeDefaults=false would omit these Kotlin defaults; the API then falls back to results=10.
+    @EncodeDefault val results: Int = 20,
+    @EncodeDefault val page: Int = 1,
     val user: String? = null,
     val count: Boolean = false,
 )
