@@ -35,6 +35,7 @@ import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.LocalDismissState
 import top.yukonga.miuix.kmp.window.WindowDialog
+import app.vndb.ui.nav.sides
 
 @Composable
 fun SettingsScreen(
@@ -57,6 +58,7 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier
                 .nestedScroll(scroll.nestedScrollConnection)
+                .padding(padding.sides())
                 .padding(top = padding.calculateTopPadding()),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
                 bottom = padding.calculateBottomPadding() + barClearance + 16.dp,

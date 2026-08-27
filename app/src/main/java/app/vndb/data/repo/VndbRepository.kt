@@ -337,7 +337,7 @@ class VndbRepository(private val client: VndbClient) {
                 fields = VndbClient.ULIST_FIELDS,
                 sort = "lastmod",
                 reverse = true,
-                results = 20,
+                results = 100,
                 page = page,
             ),
         )

@@ -38,6 +38,7 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
+import app.vndb.ui.nav.sides
 
 data class BrowseState(
     val loading: Boolean = true,
@@ -155,6 +156,7 @@ fun BrowseListScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(padding.sides())
                     .nestedScroll(scroll.nestedScrollConnection),
                 contentPadding = PaddingValues(
                     top = padding.calculateTopPadding(),

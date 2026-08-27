@@ -2,12 +2,19 @@ package app.vndb.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.union
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -40,6 +47,7 @@ import app.vndb.ui.nav.LocalBottomBarClearance
 import app.vndb.ui.nav.LocalFloatingBottomBarContentColor
 import app.vndb.ui.nav.MainTab
 import app.vndb.ui.nav.asMainTab
+import app.vndb.ui.nav.shouldShowNavigationRail
 import app.vndb.ui.nav.toRoute
 import app.vndb.ui.search.SearchScreen
 import app.vndb.ui.settings.SettingsScreen
@@ -49,6 +57,10 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.basic.NavigationRail
+import top.yukonga.miuix.kmp.basic.NavigationRailItem
+import top.yukonga.miuix.kmp.basic.NavigationRailValue
+import top.yukonga.miuix.kmp.basic.rememberNavigationRailState
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -88,8 +100,38 @@ fun VndbApp(container: AppContainer, initialRoute: AppRoute? = null) {
         val route = current()
         val showBottomBar = route.asMainTab() != null
         val useLiquid = settings.liquidGlassBar && showBottomBar
+        val wide = shouldShowNavigationRail()
 
-        if (useLiquid) {
+        if (wide) {
+            // Wide windows swap the bottom bar for a side rail that stays visible on detail pages too;
+            // it steps aside for the full-screen About page and gallery.
+            val showRail = route !is AppRoute.Gallery && route !is AppRoute.About
+            val navBottom = with(LocalDensity.current) {
+                WindowInsets.navigationBars.getBottom(this).toDp()
+            }
+            // Tab screens exclude the bottom inset from their own padding, so hand it over as clearance.
+            val clearance = if (showBottomBar) navBottom else 0.dp
+            // The rail already pads the start cutout / side navigation bar; keep pages from padding it again.
+            val railInsets = WindowInsets.displayCutout.union(WindowInsets.navigationBars)
+                .only(WindowInsetsSides.Start)
+            Scaffold(modifier = Modifier.fillMaxSize()) {
+                Row(Modifier.fillMaxSize()) {
+                    if (showRail) {
+                        MainRail(selectedTab) { push(it.toRoute()) }
+                    }
+                    CompositionLocalProvider(LocalBottomBarClearance provides clearance) {
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .then(if (showRail) Modifier.consumeWindowInsets(railInsets) else Modifier),
+                        ) {
+                            AppScreens(container, settings, route, ::push, ::pop)
+                        }
+                    }
+                }
+            }
+        } else if (useLiquid) {
             val backdrop = rememberLayerBackdrop()
             val navBottom = with(LocalDensity.current) {
                 WindowInsets.navigationBars.getBottom(this).toDp()
@@ -197,6 +239,27 @@ private fun AppScreens(
             onOpen = push,
         )
         is AppRoute.Gallery -> GalleryScreen(r.urls, r.start, onBack = pop)
+    }
+}
+
+@Composable
+private fun MainRail(selected: MainTab, onSelect: (MainTab) -> Unit) {
+    val state = rememberNavigationRailState(NavigationRailValue.Expanded)
+    NavigationRail(
+        state = state,
+        defaultWindowInsetsPadding = true,
+        color = MiuixTheme.colorScheme.surface,
+        expandContentDescription = "展开导航",
+        collapseContentDescription = "收起导航",
+    ) {
+        MainTab.entries.forEach { tab ->
+            NavigationRailItem(
+                selected = selected == tab,
+                onClick = { onSelect(tab) },
+                icon = tab.icon(),
+                label = tab.label,
+            )
+        }
     }
 }
 

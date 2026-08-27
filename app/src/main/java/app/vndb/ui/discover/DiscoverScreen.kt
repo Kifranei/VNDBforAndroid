@@ -52,6 +52,7 @@ import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.ChevronForward
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import app.vndb.ui.nav.sides
 
 data class DiscoverUiState(
     val loading: Boolean = true,
@@ -138,6 +139,7 @@ fun DiscoverScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
+                            .padding(padding.sides())
                             .nestedScroll(scroll.nestedScrollConnection),
                         contentPadding = PaddingValues(
                             top = padding.calculateTopPadding(),

@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vndb.AppContainer
+import app.vndb.data.repo.VndbRepository
 import app.vndb.data.local.UserSettings
 import app.vndb.data.model.Character
 import app.vndb.data.model.Producer
@@ -46,6 +47,8 @@ import app.vndb.util.languageName
 import app.vndb.util.platformName
 import app.vndb.util.producerTypeName
 import app.vndb.util.tagCategoryName
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,14 +89,14 @@ data class SearchUiState(
     val tags: List<Tag> = emptyList(),
 )
 
-class SearchViewModel(private val container: AppContainer) : ViewModel() {
+class SearchViewModel(private val repository: VndbRepository) : ViewModel() {
     private val _state = MutableStateFlow(SearchUiState())
     val state = _state.asStateFlow()
     private var searchJob: Job? = null
 
     fun onQueryChange(value: String) {
         _state.update { it.copy(query = value) }
-        scheduleSearch()
+        search(reset = true, debounce = true)
     }
 
     fun onKind(kind: SearchKind) {
@@ -107,26 +110,21 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun submit() {
-        searchJob?.cancel()
         search(reset = true)
     }
 
     fun loadMore() {
         val current = _state.value
-        if (!current.more || current.loading || current.loadingMore) return
+        if (searchJob?.isActive == true || !current.more || current.loading || current.loadingMore) return
         search(reset = false)
     }
 
-    private fun scheduleSearch() {
+    private fun search(reset: Boolean, debounce: Boolean = false) {
+        // The debounce and HTTP request share one job so submit also cancels an
+        // automatic search that has already started.
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            delay(380)
-            search(reset = true)
-        }
-    }
-
-    private fun search(reset: Boolean) {
-        viewModelScope.launch {
+            if (debounce) delay(380)
             val snapshot = _state.value
             val nextPage = if (reset) 1 else snapshot.page + 1
             _state.update {
@@ -134,7 +132,7 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     loading = reset,
                     loadingMore = !reset,
                     error = null,
-                    page = nextPage,
+                    more = if (reset) false else it.more,
                     vns = if (reset) emptyList() else it.vns,
                     characters = if (reset) emptyList() else it.characters,
                     producers = if (reset) emptyList() else it.producers,
@@ -142,30 +140,38 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
                     tags = if (reset) emptyList() else it.tags,
                 )
             }
-            runCatching {
+            try {
                 when (snapshot.kind) {
                     SearchKind.VN -> {
-                        val page = container.repository.searchVn(snapshot.query.trim(), nextPage, snapshot.filters)
-                        _state.update { it.copy(vns = it.vns + page.results, more = page.more, loading = false, loadingMore = false) }
+                        val page = repository.searchVn(snapshot.query.trim(), nextPage, snapshot.filters)
+                        ensureActive()
+                        _state.update { it.copy(vns = (it.vns + page.results).distinctBy { it.id }, page = nextPage, more = page.more, loading = false, loadingMore = false) }
                     }
                     SearchKind.CHARACTER -> {
-                        val page = container.repository.searchCharacters(snapshot.query.trim(), nextPage)
-                        _state.update { it.copy(characters = it.characters + page.results, more = page.more, loading = false, loadingMore = false) }
+                        val page = repository.searchCharacters(snapshot.query.trim(), nextPage)
+                        ensureActive()
+                        _state.update { it.copy(characters = (it.characters + page.results).distinctBy { it.id }, page = nextPage, more = page.more, loading = false, loadingMore = false) }
                     }
                     SearchKind.PRODUCER -> {
-                        val page = container.repository.searchProducers(snapshot.query.trim(), nextPage)
-                        _state.update { it.copy(producers = it.producers + page.results, more = page.more, loading = false, loadingMore = false) }
+                        val page = repository.searchProducers(snapshot.query.trim(), nextPage)
+                        ensureActive()
+                        _state.update { it.copy(producers = (it.producers + page.results).distinctBy { it.id }, page = nextPage, more = page.more, loading = false, loadingMore = false) }
                     }
                     SearchKind.STAFF -> {
-                        val page = container.repository.searchStaff(snapshot.query.trim(), nextPage)
-                        _state.update { it.copy(staff = it.staff + page.results, more = page.more, loading = false, loadingMore = false) }
+                        val page = repository.searchStaff(snapshot.query.trim(), nextPage)
+                        ensureActive()
+                        _state.update { it.copy(staff = (it.staff + page.results).distinctBy { it.id to it.aid }, page = nextPage, more = page.more, loading = false, loadingMore = false) }
                     }
                     SearchKind.TAG -> {
-                        val page = container.repository.searchTags(snapshot.query.trim(), nextPage)
-                        _state.update { it.copy(tags = it.tags + page.results, more = page.more, loading = false, loadingMore = false) }
+                        val page = repository.searchTags(snapshot.query.trim(), nextPage)
+                        ensureActive()
+                        _state.update { it.copy(tags = (it.tags + page.results).distinctBy { it.id }, page = nextPage, more = page.more, loading = false, loadingMore = false) }
                     }
                 }
-            }.onFailure { e ->
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                ensureActive()
                 _state.update { it.copy(loading = false, loadingMore = false, error = e.message ?: "搜索失败") }
             }
         }
@@ -178,7 +184,7 @@ fun SearchScreen(
     settings: UserSettings,
     onOpen: (AppRoute) -> Unit,
 ) {
-    val vm: SearchViewModel = viewModel(factory = vmFactory { SearchViewModel(container) })
+    val vm: SearchViewModel = viewModel(factory = vmFactory { SearchViewModel(container.repository) })
     val state by vm.state.collectAsStateWithLifecycle()
     var expanded by remember { mutableStateOf(false) }
     var showFilters by remember { mutableStateOf(false) }
@@ -275,7 +281,7 @@ fun SearchScreen(
                                     )
                                 }
                             }
-                            SearchKind.STAFF -> items(state.staff, key = { it.id + (it.aid ?: 0) }) { s ->
+                            SearchKind.STAFF -> items(state.staff, key = { "${it.id}:${it.aid}" }) { s ->
                                 Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp), onClick = { onOpen(AppRoute.Staff(s.id)) }) {
                                     BasicComponent(
                                         title = s.name.orEmpty(),

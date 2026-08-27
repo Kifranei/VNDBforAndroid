@@ -55,6 +55,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import app.vndb.ui.nav.sides
 
 private class SimpleState<T>(
     val loading: Boolean = true,
@@ -370,6 +371,7 @@ private fun <T> EntityScaffold(
             else -> LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(padding.sides())
                     .nestedScroll(scroll.nestedScrollConnection),
                 contentPadding = PaddingValues(
                     top = padding.calculateTopPadding(),

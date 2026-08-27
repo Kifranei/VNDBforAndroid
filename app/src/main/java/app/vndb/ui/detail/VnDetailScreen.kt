@@ -88,6 +88,7 @@ import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
+import app.vndb.ui.nav.sides
 
 data class VnDetailState(
     val loading: Boolean = true,
@@ -242,6 +243,7 @@ fun VnDetailScreen(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
+                        .padding(padding.sides())
                         .nestedScroll(scroll.nestedScrollConnection),
                     contentPadding = PaddingValues(
                         top = padding.calculateTopPadding(),
