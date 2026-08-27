@@ -6,12 +6,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
@@ -33,6 +36,8 @@ import app.vndb.ui.nav.LocalBottomBarClearance
 import app.vndb.ui.nav.tabContentWindowInsets
 import app.vndb.ui.vmFactory
 import app.vndb.util.ulistLabelName
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -63,13 +68,17 @@ data class LibraryUiState(
     val labels: List<UlistLabel> = emptyList(),
     val remote: List<UlistEntry> = emptyList(),
     val selectedLabel: Int? = null,
+    val page: Int = 1,
+    val more: Boolean = false,
     val loading: Boolean = false,
+    val loadingMore: Boolean = false,
     val error: String? = null,
 )
 
 class LibraryViewModel(private val container: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow(LibraryUiState())
     val state = _state.asStateFlow()
+    private var loadJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -86,19 +95,62 @@ class LibraryViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun refreshRemote(label: Int? = _state.value.selectedLabel) {
+        loadRemote(label = label, reset = true)
+    }
+
+    fun loadMore() {
+        val s = _state.value
+        if (!s.more || s.loading || s.loadingMore) return
+        loadRemote(label = s.selectedLabel, reset = false)
+    }
+
+    private fun loadRemote(label: Int?, reset: Boolean) {
         val user = container.settings.value.userId
         if (user.isBlank()) {
-            _state.update { it.copy(remote = emptyList(), labels = emptyList(), loading = false, error = null, selectedLabel = label) }
+            loadJob?.cancel()
+            _state.update {
+                it.copy(
+                    remote = emptyList(),
+                    labels = emptyList(),
+                    loading = false,
+                    loadingMore = false,
+                    more = false,
+                    page = 1,
+                    error = null,
+                    selectedLabel = label,
+                )
+            }
             return
         }
-        viewModelScope.launch {
-            _state.update { it.copy(loading = true, error = null, selectedLabel = label) }
-            runCatching {
-                val labels = container.repository.userLabels(user)
-                val page = container.repository.userList(user, label, 1)
-                _state.update { it.copy(labels = labels, remote = page.results, loading = false) }
-            }.onFailure { e ->
-                _state.update { it.copy(loading = false, error = e.message ?: "同步失败") }
+        if (reset) loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            val next = if (reset) 1 else _state.value.page + 1
+            _state.update {
+                it.copy(
+                    loading = reset,
+                    loadingMore = !reset,
+                    error = null,
+                    selectedLabel = label,
+                    page = next,
+                    remote = if (reset) emptyList() else it.remote,
+                )
+            }
+            try {
+                val labels = if (reset) container.repository.userLabels(user) else _state.value.labels
+                val page = container.repository.userList(user, label, next)
+                _state.update {
+                    it.copy(
+                        labels = labels,
+                        remote = it.remote + page.results,
+                        more = page.more,
+                        loading = false,
+                        loadingMore = false,
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { it.copy(loading = false, loadingMore = false, error = e.message ?: "同步失败") }
             }
         }
     }
@@ -172,12 +224,21 @@ fun LibraryScreen(
                         EmptyState("在设置里填入 API Token 后可同步 VNDB 列表", Modifier.weight(1f))
                     } else if (state.loading) {
                         LoadingBox(Modifier.weight(1f))
-                    } else if (state.error != null) {
+                    } else if (state.error != null && state.remote.isEmpty()) {
                         ErrorState(state.error ?: "", onRetry = { vm.refreshRemote() }, Modifier.weight(1f))
                     } else {
                         val labels = listOf("全部") + state.labels.map { ulistLabelName(it.id, it.label) }
                         val selected = if (state.selectedLabel == null) 0 else state.labels.indexOfFirst { it.id == state.selectedLabel } + 1
+                        val listState = rememberLazyListState()
+                        LaunchedEffect(listState) {
+                            snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+                                .collect { last ->
+                                    val total = listState.layoutInfo.totalItemsCount
+                                    if (last != null && total > 4 && last >= total - 3) vm.loadMore()
+                                }
+                        }
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.weight(1f).nestedScroll(scroll.nestedScrollConnection),
                             contentPadding = PaddingValues(bottom = padding.calculateBottomPadding() + barClearance + 8.dp),
                         ) {
@@ -201,6 +262,9 @@ fun LibraryScreen(
                                 if (vn != null) {
                                     VnRowCard(vn, settings, onClick = { onOpen(AppRoute.Vn(vn.id.ifBlank { entry.id })) })
                                 }
+                            }
+                            if (state.loadingMore) {
+                                item { LoadingBox(Modifier.padding(16.dp)) }
                             }
                         }
                     }
