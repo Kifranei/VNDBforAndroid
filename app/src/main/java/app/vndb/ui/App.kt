@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.vndb.AppContainer
 import app.vndb.ui.about.AboutScreen
+import app.vndb.ui.components.LocalGlassBackdrop
 import app.vndb.ui.components.LocalProgressiveTopBarBlur
 import app.vndb.ui.detail.BrowseListScreen
 import app.vndb.ui.detail.CharacterDetailScreen
@@ -145,7 +146,10 @@ fun VndbApp(container: AppContainer, initialRoute: AppRoute? = null) {
             // Keep overlays above both the backdrop layer and the floating bottom bar.
             Scaffold(modifier = Modifier.fillMaxSize()) {
                 Box(Modifier.fillMaxSize()) {
-                    CompositionLocalProvider(LocalBottomBarClearance provides clearance) {
+                    CompositionLocalProvider(
+                        LocalBottomBarClearance provides clearance,
+                        LocalGlassBackdrop provides glassBackdrop,
+                    ) {
                         Box(
                             Modifier
                                 .matchParentSize()

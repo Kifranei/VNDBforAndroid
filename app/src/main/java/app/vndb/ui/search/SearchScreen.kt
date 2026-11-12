@@ -69,7 +69,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
+import app.vndb.ui.components.Os4DropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
@@ -353,7 +353,9 @@ private fun FilterSheet(
         Column {
             SmallTitle("对应 VNDB POST /vn 的 filters / sort")
             Card(Modifier.padding(12.dp)) {
-                WindowDropdownPreference(
+                Os4DropdownPreference(
+                    // 位于底部弹窗内：页面 backdrop 被弹窗遮住，使用不透明填充
+                    backdrop = null,
                     items = langs.map { if (it == "不限") it else languageName(it) },
                     selectedIndex = langs.indexOf(draft.language ?: "不限").coerceAtLeast(0),
                     title = "可用语言",
@@ -362,7 +364,9 @@ private fun FilterSheet(
                     },
                 )
                 HorizontalDivider()
-                WindowDropdownPreference(
+                Os4DropdownPreference(
+                    // 位于底部弹窗内：页面 backdrop 被弹窗遮住，使用不透明填充
+                    backdrop = null,
                     items = platforms.map { if (it == "不限") it else platformName(it) },
                     selectedIndex = platforms.indexOf(draft.platform ?: "不限").coerceAtLeast(0),
                     title = "平台",
@@ -371,7 +375,9 @@ private fun FilterSheet(
                     },
                 )
                 HorizontalDivider()
-                WindowDropdownPreference(
+                Os4DropdownPreference(
+                    // 位于底部弹窗内：页面 backdrop 被弹窗遮住，使用不透明填充
+                    backdrop = null,
                     items = listOf("不限", "7.0", "7.5", "8.0", "8.5", "9.0"),
                     selectedIndex = listOf(null, 70, 75, 80, 85, 90).indexOf(draft.minRating).coerceAtLeast(0),
                     title = "最低评分",
@@ -380,7 +386,9 @@ private fun FilterSheet(
                     },
                 )
                 HorizontalDivider()
-                WindowDropdownPreference(
+                Os4DropdownPreference(
+                    // 位于底部弹窗内：页面 backdrop 被弹窗遮住，使用不透明填充
+                    backdrop = null,
                     items = lengths,
                     selectedIndex = draft.length ?: 0,
                     title = "时长",
@@ -389,7 +397,9 @@ private fun FilterSheet(
                     },
                 )
                 HorizontalDivider()
-                WindowDropdownPreference(
+                Os4DropdownPreference(
+                    // 位于底部弹窗内：页面 backdrop 被弹窗遮住，使用不透明填充
+                    backdrop = null,
                     items = sortLabels,
                     selectedIndex = sorts.indexOf(draft.sort).coerceAtLeast(0),
                     title = "排序",

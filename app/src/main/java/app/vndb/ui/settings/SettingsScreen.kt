@@ -36,7 +36,7 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
+import app.vndb.ui.components.Os4DropdownPreference
 import top.yukonga.miuix.kmp.theme.LocalDismissState
 import top.yukonga.miuix.kmp.window.WindowDialog
 import app.vndb.ui.nav.sides
@@ -77,7 +77,7 @@ fun SettingsScreen(
             item { SmallTitle("外观") }
             item {
                 Card(Modifier.padding(horizontal = 12.dp)) {
-                    WindowDropdownPreference(
+                    Os4DropdownPreference(
                         items = ColorMode.entries.map { it.label },
                         selectedIndex = settings.colorMode.ordinal,
                         title = "颜色模式",
@@ -85,7 +85,7 @@ fun SettingsScreen(
                             scope.launch { container.preferences.setColorMode(ColorMode.entries[it]) }
                         },
                     )
-                    WindowDropdownPreference(
+                    Os4DropdownPreference(
                         items = TitlePreference.entries.map { it.label },
                         selectedIndex = settings.titlePreference.ordinal,
                         title = "标题语言",
@@ -94,7 +94,7 @@ fun SettingsScreen(
                             scope.launch { container.preferences.setTitlePreference(TitlePreference.entries[it]) }
                         },
                     )
-                    WindowDropdownPreference(
+                    Os4DropdownPreference(
                         items = NsfwPolicy.entries.map { it.label },
                         selectedIndex = settings.nsfwPolicy.ordinal,
                         title = "敏感封面",
@@ -103,7 +103,7 @@ fun SettingsScreen(
                             scope.launch { container.preferences.setNsfwPolicy(NsfwPolicy.entries[it]) }
                         },
                     )
-                    WindowDropdownPreference(
+                    Os4DropdownPreference(
                         items = listOf("无剧透", "轻微剧透", "全部剧透"),
                         selectedIndex = settings.spoilerLevel,
                         title = "剧透等级",

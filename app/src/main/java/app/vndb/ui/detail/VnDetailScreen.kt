@@ -89,7 +89,7 @@ import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
+import app.vndb.ui.components.Os4DropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import app.vndb.ui.nav.sides
@@ -534,7 +534,9 @@ private fun UlistSheet(
     ) {
         Column {
             Card(Modifier.padding(12.dp)) {
-                WindowDropdownPreference(
+                Os4DropdownPreference(
+                    // 位于底部弹窗内：页面 backdrop 被弹窗遮住，使用不透明填充
+                    backdrop = null,
                     items = voteOptions,
                     selectedIndex = voteIndex,
                     title = "评分",

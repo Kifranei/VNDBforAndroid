@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Vendored from miuix-glass (compose-miuix-ui) via Kifranei/Halcyon: miuix-glass is not yet
-// published to Maven Central, so only the files needed by GlassNavigationBar/glassPanel are kept.
+// published to Maven Central, so only the files needed by GlassNavigationBar/glassPanel and the OS4
+// glass dropdown popups (GlassDropdownPopup/GlassPopup*) are kept.
 // Local change: GlassNavigationItem.badge.
 
 package top.yukonga.miuix.kmp.glass
