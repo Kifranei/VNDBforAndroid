@@ -27,6 +27,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
@@ -46,6 +47,9 @@ import app.vndb.ui.components.ErrorState
 import app.vndb.ui.components.InfoChip
 import app.vndb.ui.components.LoadingBox
 import app.vndb.ui.components.PosterCard
+import app.vndb.ui.components.ProgressiveBlurTopBar
+import app.vndb.ui.components.progressiveBlurSource
+import app.vndb.ui.components.rememberProgressiveBlurBackdrop
 import app.vndb.ui.nav.AppRoute
 import app.vndb.ui.vmFactory
 import app.vndb.util.characterRoleName
@@ -206,32 +210,36 @@ fun VnDetailScreen(
             .collect { (index, offset) -> vm.saveScroll(index, offset) }
     }
 
+    val blurBackdrop = rememberProgressiveBlurBackdrop()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = state.vn?.displayTitle(settings.titlePreference).orEmpty().ifBlank { "作品" },
-                scrollBehavior = scroll,
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(MiuixIcons.Back, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showList = true }) {
-                        Icon(MiuixIcons.Edit, contentDescription = "列表")
-                    }
-                    IconButton(onClick = { vm.toggleFavorite() }) {
-                        Icon(
-                            if (state.favorited) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
-                            contentDescription = "收藏",
-                            tint = if (state.favorited) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onBackground,
-                        )
-                    }
-                    IconButton(onClick = { uri.openUri(vndbSiteUrl(id)) }) {
-                        Icon(MiuixIcons.Share, contentDescription = "打开网站")
-                    }
-                },
-            )
+            ProgressiveBlurTopBar(blurBackdrop) {
+                TopAppBar(
+                    title = state.vn?.displayTitle(settings.titlePreference).orEmpty().ifBlank { "作品" },
+                    color = Color.Transparent,
+                    scrollBehavior = scroll,
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(MiuixIcons.Back, contentDescription = "返回")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { showList = true }) {
+                            Icon(MiuixIcons.Edit, contentDescription = "列表")
+                        }
+                        IconButton(onClick = { vm.toggleFavorite() }) {
+                            Icon(
+                                if (state.favorited) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+                                contentDescription = "收藏",
+                                tint = if (state.favorited) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onBackground,
+                            )
+                        }
+                        IconButton(onClick = { uri.openUri(vndbSiteUrl(id)) }) {
+                            Icon(MiuixIcons.Share, contentDescription = "打开网站")
+                        }
+                    },
+                )
+            }
         },
     ) { padding ->
         when {
@@ -243,6 +251,7 @@ fun VnDetailScreen(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
+                        .progressiveBlurSource(blurBackdrop)
                         .padding(padding.sides())
                         .nestedScroll(scroll.nestedScrollConnection),
                     contentPadding = PaddingValues(

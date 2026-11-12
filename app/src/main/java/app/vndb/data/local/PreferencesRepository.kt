@@ -26,6 +26,7 @@ data class UserSettings(
     val userId: String = "",
     val username: String = "",
     val liquidGlassBar: Boolean = false,
+    val progressiveTopBarBlur: Boolean = true,
 )
 
 class PreferencesRepository(private val context: Context) {
@@ -41,6 +42,7 @@ class PreferencesRepository(private val context: Context) {
             userId = prefs[USER_ID].orEmpty(),
             username = prefs[USERNAME].orEmpty(),
             liquidGlassBar = prefs[LIQUID_GLASS] ?: false,
+            progressiveTopBarBlur = prefs[PROGRESSIVE_TOP_BAR_BLUR] ?: true,
         )
     }
 
@@ -74,6 +76,10 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setLiquidGlassBar(enabled: Boolean) {
         context.dataStore.edit { it[LIQUID_GLASS] = enabled }
+    }
+
+    suspend fun setProgressiveTopBarBlur(enabled: Boolean) {
+        context.dataStore.edit { it[PROGRESSIVE_TOP_BAR_BLUR] = enabled }
     }
 
     suspend fun setApiToken(token: String) {
@@ -156,5 +162,6 @@ class PreferencesRepository(private val context: Context) {
         private val FAVORITES = stringPreferencesKey("favorites")
         private val HISTORY = stringPreferencesKey("history")
         private val LIQUID_GLASS = booleanPreferencesKey("liquid_glass_bar")
+        private val PROGRESSIVE_TOP_BAR_BLUR = booleanPreferencesKey("progressive_top_bar_blur")
     }
 }

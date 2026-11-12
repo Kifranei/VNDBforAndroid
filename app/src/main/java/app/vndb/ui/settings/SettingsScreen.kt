@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
@@ -19,6 +20,9 @@ import app.vndb.data.local.UserSettings
 import app.vndb.data.model.ColorMode
 import app.vndb.data.model.NsfwPolicy
 import app.vndb.data.model.TitlePreference
+import app.vndb.ui.components.ProgressiveBlurTopBar
+import app.vndb.ui.components.progressiveBlurSource
+import app.vndb.ui.components.rememberProgressiveBlurBackdrop
 import app.vndb.ui.nav.LocalBottomBarClearance
 import app.vndb.ui.nav.tabContentWindowInsets
 import kotlinx.coroutines.launch
@@ -51,16 +55,22 @@ fun SettingsScreen(
     var tokenMessage by remember { mutableStateOf<String?>(null) }
     val barClearance = LocalBottomBarClearance.current
 
+    val blurBackdrop = rememberProgressiveBlurBackdrop()
     Scaffold(
         contentWindowInsets = tabContentWindowInsets(),
-        topBar = { TopAppBar(title = "设置", largeTitle = "设置", scrollBehavior = scroll) },
+        topBar = {
+            ProgressiveBlurTopBar(blurBackdrop) {
+                TopAppBar(title = "设置", largeTitle = "设置", color = Color.Transparent, scrollBehavior = scroll)
+            }
+        },
     ) { padding ->
         LazyColumn(
             modifier = Modifier
+                .progressiveBlurSource(blurBackdrop)
                 .nestedScroll(scroll.nestedScrollConnection)
-                .padding(padding.sides())
-                .padding(top = padding.calculateTopPadding()),
+                .padding(padding.sides()),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                top = padding.calculateTopPadding(),
                 bottom = padding.calculateBottomPadding() + barClearance + 16.dp,
             ),
         ) {
@@ -107,7 +117,15 @@ fun SettingsScreen(
                             scope.launch { container.preferences.setLiquidGlassBar(it) }
                         },
                         title = "液态玻璃底栏",
-                        summary = "关闭时使用普通 Miuix 底栏，开启后为悬浮液态玻璃",
+                        summary = "关闭时使用普通 Miuix 底栏，开启后为 OS4 风格悬浮液态玻璃",
+                    )
+                    SwitchPreference(
+                        checked = settings.progressiveTopBarBlur,
+                        onCheckedChange = {
+                            scope.launch { container.preferences.setProgressiveTopBarBlur(it) }
+                        },
+                        title = "顶栏渐进模糊",
+                        summary = "滚动内容在顶栏下方逐渐模糊，需要 Android 13 及以上，低版本为渐变着色",
                     )
                 }
             }
