@@ -1,13 +1,12 @@
 package app.vndb.data.local
 
 import android.content.Context
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import app.vndb.data.model.ColorMode
-import app.vndb.data.model.FavoriteItem
+import app.vndb.data.model.HistoryItem
 import app.vndb.data.model.NsfwPolicy
 import app.vndb.data.model.TitlePreference
 import kotlinx.coroutines.flow.Flow
@@ -25,7 +24,6 @@ data class UserSettings(
     val spoilerLevel: Int = 0,
     val userId: String = "",
     val username: String = "",
-    val liquidGlassBar: Boolean = false,
 )
 
 class PreferencesRepository(private val context: Context) {
@@ -40,20 +38,13 @@ class PreferencesRepository(private val context: Context) {
             spoilerLevel = prefs[SPOILER] ?: 0,
             userId = prefs[USER_ID].orEmpty(),
             username = prefs[USERNAME].orEmpty(),
-            liquidGlassBar = prefs[LIQUID_GLASS] ?: false,
         )
     }
 
-    val favorites: Flow<List<FavoriteItem>> = context.dataStore.data.map { prefs ->
-        val raw = prefs[FAVORITES].orEmpty()
-        if (raw.isBlank()) emptyList()
-        else runCatching { json.decodeFromString<List<FavoriteItem>>(raw) }.getOrDefault(emptyList())
-    }
-
-    val history: Flow<List<FavoriteItem>> = context.dataStore.data.map { prefs ->
+    val history: Flow<List<HistoryItem>> = context.dataStore.data.map { prefs ->
         val raw = prefs[HISTORY].orEmpty()
         if (raw.isBlank()) emptyList()
-        else runCatching { json.decodeFromString<List<FavoriteItem>>(raw) }.getOrDefault(emptyList())
+        else runCatching { json.decodeFromString<List<HistoryItem>>(raw) }.getOrDefault(emptyList())
     }
 
     suspend fun setColorMode(mode: ColorMode) {
@@ -70,10 +61,6 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setSpoilerLevel(level: Int) {
         context.dataStore.edit { it[SPOILER] = level.coerceIn(0, 2) }
-    }
-
-    suspend fun setLiquidGlassBar(enabled: Boolean) {
-        context.dataStore.edit { it[LIQUID_GLASS] = enabled }
     }
 
     suspend fun setApiToken(token: String) {
@@ -95,34 +82,10 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
-    suspend fun toggleFavorite(item: FavoriteItem): Boolean {
-        var added = false
-        context.dataStore.edit { prefs ->
-            val current = prefs[FAVORITES]
-                ?.let { runCatching { json.decodeFromString<List<FavoriteItem>>(it) }.getOrNull() }
-                .orEmpty()
-                .toMutableList()
-            val index = current.indexOfFirst { it.id == item.id && it.type == item.type }
-            if (index >= 0) {
-                current.removeAt(index)
-            } else {
-                current.add(0, item)
-                added = true
-            }
-            prefs[FAVORITES] = json.encodeToString(current)
-        }
-        return added
-    }
-
-    suspend fun isFavorite(id: String, type: String): Boolean {
-        // used only after collecting flow; kept for completeness
-        return false
-    }
-
-    suspend fun addHistory(item: FavoriteItem) {
+    suspend fun addHistory(item: HistoryItem) {
         context.dataStore.edit { prefs ->
             val current = prefs[HISTORY]
-                ?.let { runCatching { json.decodeFromString<List<FavoriteItem>>(it) }.getOrNull() }
+                ?.let { runCatching { json.decodeFromString<List<HistoryItem>>(it) }.getOrNull() }
                 .orEmpty()
                 .toMutableList()
             current.removeAll { it.id == item.id && it.type == item.type }
@@ -131,10 +94,10 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
-    suspend fun removeHistory(item: FavoriteItem) {
+    suspend fun removeHistory(item: HistoryItem) {
         context.dataStore.edit { prefs ->
             val current = prefs[HISTORY]
-                ?.let { runCatching { json.decodeFromString<List<FavoriteItem>>(it) }.getOrNull() }
+                ?.let { runCatching { json.decodeFromString<List<HistoryItem>>(it) }.getOrNull() }
                 .orEmpty()
                 .filterNot { it.id == item.id && it.type == item.type }
             prefs[HISTORY] = json.encodeToString(current)
@@ -142,7 +105,7 @@ class PreferencesRepository(private val context: Context) {
     }
 
     suspend fun clearHistory() {
-        context.dataStore.edit { it[HISTORY] = json.encodeToString(emptyList<FavoriteItem>()) }
+        context.dataStore.edit { it[HISTORY] = json.encodeToString(emptyList<HistoryItem>()) }
     }
 
     companion object {
@@ -153,8 +116,6 @@ class PreferencesRepository(private val context: Context) {
         private val SPOILER = intPreferencesKey("spoiler")
         private val USER_ID = stringPreferencesKey("user_id")
         private val USERNAME = stringPreferencesKey("username")
-        private val FAVORITES = stringPreferencesKey("favorites")
         private val HISTORY = stringPreferencesKey("history")
-        private val LIQUID_GLASS = booleanPreferencesKey("liquid_glass_bar")
     }
 }

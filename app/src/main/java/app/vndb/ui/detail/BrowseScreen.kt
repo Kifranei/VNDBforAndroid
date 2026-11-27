@@ -24,20 +24,25 @@ import app.vndb.ui.components.EmptyState
 import app.vndb.ui.components.ErrorState
 import app.vndb.ui.components.LoadingBox
 import app.vndb.ui.components.VnRowCard
+import app.vndb.ui.components.progressiveBlurSource
+import app.vndb.ui.components.rememberProgressiveBlurBackdrop
 import app.vndb.ui.nav.AppRoute
 import app.vndb.ui.nav.BrowseMode
+import app.vndb.ui.nav.sides
 import app.vndb.ui.vmFactory
+import app.vndb.ui.nav.LocalTopBarCenterObstructionStart
+import app.vndb.ui.nav.LocalTopBarTitleAlpha
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.glass.GlassIconButton
+import top.yukonga.miuix.kmp.glass.GlassTopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.glass.ChevronBackward
 
 data class BrowseState(
     val loading: Boolean = true,
@@ -133,14 +138,19 @@ fun BrowseListScreen(
             }
     }
 
+    val blurBackdrop = rememberProgressiveBlurBackdrop()
     Scaffold(
         topBar = {
-            TopAppBar(
+            GlassTopAppBar(
                 title = title,
                 scrollBehavior = scroll,
+                progressiveBlur = true,
+                backdrop = blurBackdrop,
+                titleAlpha = LocalTopBarTitleAlpha.current,
+                centerObstructionStart = LocalTopBarCenterObstructionStart.current,
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(MiuixIcons.Back, contentDescription = "返回")
+                    GlassIconButton(onClick = onBack) {
+                        Icon(MiuixIcons.Glass.ChevronBackward, contentDescription = "返回")
                     }
                 },
             )
@@ -155,6 +165,8 @@ fun BrowseListScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .progressiveBlurSource(blurBackdrop)
+                    .padding(padding.sides())
                     .nestedScroll(scroll.nestedScrollConnection),
                 contentPadding = PaddingValues(
                     top = padding.calculateTopPadding(),

@@ -1,5 +1,5 @@
 [versions]
-agp = "9.2.0"
+agp = "9.5.3"
 kotlin = "2.4.10"
 composeBom = "2025.08.01"
 activityCompose = "1.13.0"
@@ -9,7 +9,7 @@ ktor = "3.2.3"
 coil = "3.3.0"
 serialization = "1.9.0"
 coroutines = "1.10.2"
-miuix = "0.9.3"
+miuix = "0.9.5-rc01"
 coreKtx = "1.17.0"
 
 [libraries]
@@ -38,8 +38,11 @@ coil-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "
 
 miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.ref = "miuix" }
 miuix-preference = { module = "top.yukonga.miuix.kmp:miuix-preference-android", version.ref = "miuix" }
-miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.ref = "miuix" }
 miuix-blur = { module = "top.yukonga.miuix.kmp:miuix-blur-android", version.ref = "miuix" }
+miuix-material = { module = "top.yukonga.miuix.kmp:miuix-material-android", version.ref = "miuix" }
+miuix-glass = { module = "top.yukonga.miuix.kmp:miuix-glass-android", version.ref = "miuix" }
+miuix-glass-icons = { module = "top.yukonga.miuix.kmp:miuix-glass-icons-android", version.ref = "miuix" }
+miuix-nav = { module = "top.yukonga.miuix.kmp:miuix-nav-android", version.ref = "miuix" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

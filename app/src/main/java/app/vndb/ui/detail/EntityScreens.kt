@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,7 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vndb.AppContainer
 import app.vndb.data.local.UserSettings
 import app.vndb.data.model.Character
-import app.vndb.data.model.FavoriteItem
+import app.vndb.data.model.HistoryItem
 import app.vndb.data.model.Producer
 import app.vndb.data.model.Staff
 import app.vndb.data.model.Tag
@@ -33,27 +32,32 @@ import app.vndb.ui.components.ErrorState
 import app.vndb.ui.components.InfoChip
 import app.vndb.ui.components.LoadingBox
 import app.vndb.ui.components.VnRowCard
+import app.vndb.ui.components.progressiveBlurSource
+import app.vndb.ui.components.rememberProgressiveBlurBackdrop
 import app.vndb.ui.nav.AppRoute
+import app.vndb.ui.nav.sides
 import app.vndb.ui.vmFactory
 import app.vndb.util.formatBirthday
 import app.vndb.util.producerTypeName
 import app.vndb.util.stripVndbMarkup
 import app.vndb.util.tagCategoryName
 import app.vndb.util.visibleUrl
+import app.vndb.ui.nav.LocalTopBarCenterObstructionStart
+import app.vndb.ui.nav.LocalTopBarTitleAlpha
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.glass.GlassCard
+import top.yukonga.miuix.kmp.glass.GlassIconButton
+import top.yukonga.miuix.kmp.glass.GlassTopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.glass.ChevronBackward
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private class SimpleState<T>(
@@ -100,7 +104,7 @@ fun CharacterDetailScreen(
         factory = vmFactory {
             EntityVm {
                 val ch = container.repository.characterDetail(id)
-                container.preferences.addHistory(FavoriteItem(ch.id, "character", ch.name ?: ch.id, ch.original, ch.image?.url))
+                container.preferences.addHistory(HistoryItem(ch.id, "character", ch.name ?: ch.id, ch.original, ch.image.visibleUrl(container.settings.value.nsfwPolicy)))
                 ch to emptyList()
             }
         },
@@ -112,7 +116,7 @@ fun CharacterDetailScreen(
         onRetry = vm::refresh,
     ) { ch ->
         item {
-            Card(Modifier.padding(12.dp), insideMargin = PaddingValues(12.dp)) {
+            GlassCard(Modifier.padding(12.dp), insideMargin = PaddingValues(12.dp)) {
                 Row {
                     CoverImage(ch.image.visibleUrl(settings.nsfwPolicy), Modifier.width(108.dp), ch.name, 0.85f)
                     Spacer(Modifier.width(12.dp))
@@ -136,7 +140,7 @@ fun CharacterDetailScreen(
         )
         if (measures.isNotEmpty()) {
             item {
-                Card(Modifier.padding(horizontal = 12.dp), insideMargin = PaddingValues(16.dp)) {
+                GlassCard(Modifier.padding(horizontal = 12.dp), insideMargin = PaddingValues(16.dp)) {
                     Text(measures.joinToString(" · "))
                 }
             }
@@ -145,7 +149,7 @@ fun CharacterDetailScreen(
         if (desc.isNotBlank()) {
             item { SmallTitle("简介") }
             item {
-                Card(Modifier.padding(horizontal = 12.dp), insideMargin = PaddingValues(16.dp)) {
+                GlassCard(Modifier.padding(horizontal = 12.dp), insideMargin = PaddingValues(16.dp)) {
                     Text(desc, style = MiuixTheme.textStyles.paragraph)
                 }
             }
@@ -155,7 +159,7 @@ fun CharacterDetailScreen(
         if (traits.isNotEmpty()) {
             item { SmallTitle("特征") }
             item {
-                Card(Modifier.padding(horizontal = 12.dp)) {
+                GlassCard(Modifier.padding(horizontal = 12.dp)) {
                     traits.forEach { t ->
                         BasicComponent(
                             title = t.name.orEmpty(),
@@ -168,7 +172,7 @@ fun CharacterDetailScreen(
         if (ch.vns.isNotEmpty()) {
             item { SmallTitle("登场作品") }
             items(ch.vns.distinctBy { it.id }, key = { it.id }) { vn ->
-                Card(Modifier.padding(horizontal = 12.dp, vertical = 5.dp), onClick = { onOpen(AppRoute.Vn(vn.id)) }) {
+                GlassCard(Modifier.padding(horizontal = 12.dp, vertical = 5.dp), onClick = { onOpen(AppRoute.Vn(vn.id)) }) {
                     BasicComponent(title = vn.title.orEmpty(), summary = vn.role)
                 }
             }
@@ -190,7 +194,7 @@ fun ProducerDetailScreen(
             EntityVm {
                 val p = container.repository.producerDetail(id)
                 val vns = container.repository.vnByDeveloper(id, 1).results
-                container.preferences.addHistory(FavoriteItem(p.id, "producer", p.name ?: p.id, p.original, null))
+                container.preferences.addHistory(HistoryItem(p.id, "producer", p.name ?: p.id, p.original, null))
                 p to vns
             }
         },
@@ -203,7 +207,7 @@ fun ProducerDetailScreen(
         onRetry = vm::refresh,
     ) { p ->
         item {
-            Card(Modifier.padding(12.dp), insideMargin = PaddingValues(16.dp)) {
+            GlassCard(Modifier.padding(12.dp), insideMargin = PaddingValues(16.dp)) {
                 Text(p.name.orEmpty(), style = MiuixTheme.textStyles.title3)
                 p.original?.let { Text(it, color = MiuixTheme.colorScheme.onSurfaceSecondary) }
                 Text(listOfNotNull(producerTypeName(p.type), p.lang).joinToString(" · "), modifier = Modifier.padding(top = 6.dp))
@@ -213,7 +217,7 @@ fun ProducerDetailScreen(
         if (desc.isNotBlank()) {
             item { SmallTitle("简介") }
             item {
-                Card(Modifier.padding(horizontal = 12.dp), insideMargin = PaddingValues(16.dp)) {
+                GlassCard(Modifier.padding(horizontal = 12.dp), insideMargin = PaddingValues(16.dp)) {
                     Text(desc, style = MiuixTheme.textStyles.paragraph)
                 }
             }
@@ -241,7 +245,7 @@ fun StaffDetailScreen(
             EntityVm {
                 val s = container.repository.staffDetail(id)
                 val vns = container.repository.vnByStaff(id, 1).results
-                container.preferences.addHistory(FavoriteItem(s.id, "staff", s.name ?: s.id, s.original, null))
+                container.preferences.addHistory(HistoryItem(s.id, "staff", s.name ?: s.id, s.original, null))
                 s to vns
             }
         },
@@ -254,7 +258,7 @@ fun StaffDetailScreen(
         onRetry = vm::refresh,
     ) { s ->
         item {
-            Card(Modifier.padding(12.dp), insideMargin = PaddingValues(16.dp)) {
+            GlassCard(Modifier.padding(12.dp), insideMargin = PaddingValues(16.dp)) {
                 Text(s.name.orEmpty(), style = MiuixTheme.textStyles.title3)
                 s.original?.let { Text(it, color = MiuixTheme.colorScheme.onSurfaceSecondary) }
                 Text(listOfNotNull(s.lang, s.gender).joinToString(" · "), modifier = Modifier.padding(top = 6.dp))
@@ -264,7 +268,7 @@ fun StaffDetailScreen(
         if (desc.isNotBlank()) {
             item { SmallTitle("简介") }
             item {
-                Card(Modifier.padding(horizontal = 12.dp), insideMargin = PaddingValues(16.dp)) {
+                GlassCard(Modifier.padding(horizontal = 12.dp), insideMargin = PaddingValues(16.dp)) {
                     Text(desc, style = MiuixTheme.textStyles.paragraph)
                 }
             }
@@ -272,7 +276,7 @@ fun StaffDetailScreen(
         if (s.aliases.isNotEmpty()) {
             item { SmallTitle("别名") }
             item {
-                Card(Modifier.padding(horizontal = 12.dp)) {
+                GlassCard(Modifier.padding(horizontal = 12.dp)) {
                     s.aliases.forEach { alias ->
                         BasicComponent(title = alias.latin ?: alias.name.orEmpty(), summary = alias.name)
                     }
@@ -302,7 +306,7 @@ fun TagDetailScreen(
             EntityVm {
                 val tag = container.repository.tagDetail(id)
                 val vns = container.repository.vnByTag(id, 1).results
-                container.preferences.addHistory(FavoriteItem(tag.id, "tag", tag.name ?: tag.id, tagCategoryName(tag.category), null))
+                container.preferences.addHistory(HistoryItem(tag.id, "tag", tag.name ?: tag.id, tagCategoryName(tag.category), null))
                 tag to vns
             }
         },
@@ -315,7 +319,7 @@ fun TagDetailScreen(
         onRetry = vm::refresh,
     ) { tag ->
         item {
-            Card(Modifier.padding(12.dp), insideMargin = PaddingValues(16.dp)) {
+            GlassCard(Modifier.padding(12.dp), insideMargin = PaddingValues(16.dp)) {
                 Text(tag.name.orEmpty(), style = MiuixTheme.textStyles.title3)
                 Text(
                     listOfNotNull(tagCategoryName(tag.category), tag.vnCount?.let { "$it 部作品" }).joinToString(" · "),
@@ -327,7 +331,7 @@ fun TagDetailScreen(
         if (desc.isNotBlank()) {
             item { SmallTitle("说明") }
             item {
-                Card(Modifier.padding(horizontal = 12.dp), insideMargin = PaddingValues(16.dp)) {
+                GlassCard(Modifier.padding(horizontal = 12.dp), insideMargin = PaddingValues(16.dp)) {
                     Text(desc, style = MiuixTheme.textStyles.paragraph)
                 }
             }
@@ -350,14 +354,19 @@ private fun <T> EntityScaffold(
     content: androidx.compose.foundation.lazy.LazyListScope.(T) -> Unit,
 ) {
     val scroll = MiuixScrollBehavior()
+    val blurBackdrop = rememberProgressiveBlurBackdrop()
     Scaffold(
         topBar = {
-            TopAppBar(
+            GlassTopAppBar(
                 title = title,
                 scrollBehavior = scroll,
+                progressiveBlur = true,
+                backdrop = blurBackdrop,
+                titleAlpha = LocalTopBarTitleAlpha.current,
+                centerObstructionStart = LocalTopBarCenterObstructionStart.current,
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(MiuixIcons.Back, contentDescription = "返回")
+                    GlassIconButton(onClick = onBack) {
+                        Icon(MiuixIcons.Glass.ChevronBackward, contentDescription = "返回")
                     }
                 },
             )
@@ -370,6 +379,8 @@ private fun <T> EntityScaffold(
             else -> LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
+                    .progressiveBlurSource(blurBackdrop)
+                    .padding(padding.sides())
                     .nestedScroll(scroll.nestedScrollConnection),
                 contentPadding = PaddingValues(
                     top = padding.calculateTopPadding(),

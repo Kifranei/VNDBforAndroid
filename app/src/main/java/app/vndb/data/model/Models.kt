@@ -330,7 +330,7 @@ data class DbStats(
 )
 
 @Serializable
-data class FavoriteItem(
+data class HistoryItem(
     val id: String,
     val type: String,
     val title: String,

@@ -1,8 +1,10 @@
 package app.vndb.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,15 +14,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.vndb.data.local.UserSettings
 import app.vndb.data.model.Character
@@ -32,14 +38,65 @@ import app.vndb.util.formatRating
 import app.vndb.util.formatVotes
 import app.vndb.util.visibleUrl
 import coil3.compose.AsyncImage
-import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.blur.Backdrop
+import top.yukonga.miuix.kmp.glass.GlassCard
+import top.yukonga.miuix.kmp.glass.GlassDialogButton
+import top.yukonga.miuix.kmp.glass.GlassDialogButtonRole
+import top.yukonga.miuix.kmp.glass.GlassTabRow
+import top.yukonga.miuix.kmp.glass.GlassTabRowDefaults
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
+
+
+internal fun sheetHeaderAlwaysFloatingScrollOffset(): Float = 2f
+
+/**
+ * A scrolling OS4 glass tab row using the rc01 [GlassTabRow] API.
+ *
+ * GlassTabRow distributes its tabs by weight, so it needs a finite width even when the row can
+ * scroll. Each tab is sized from its label, with the standard Miuix tab width range as bounds.
+ */
+@Composable
+fun ScrollableGlassTabRow(
+    tabs: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    backdrop: Backdrop?,
+    modifier: Modifier = Modifier,
+    minTabWidth: Dp = 76.dp,
+    maxTabWidth: Dp = 160.dp,
+    horizontalPadding: Dp = 12.dp,
+    verticalPadding: Dp = 8.dp,
+) {
+    if (tabs.isEmpty()) return
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val labelStyle = MiuixTheme.textStyles.subtitle
+    val tabWidth = remember(tabs, labelStyle, density) {
+        val maxLabelWidth = tabs.maxOf { textMeasurer.measure(it, labelStyle).size.width }
+        with(density) { maxLabelWidth.toDp() } + GlassTabRowDefaults.TabPaddingHorizontal * 2
+    }.coerceIn(minTabWidth, maxTabWidth)
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val gapWidth = GlassTabRowDefaults.TabGap * (tabs.size - 1).coerceAtLeast(0)
+        val contentWidth = horizontalPadding * 2 + tabWidth * tabs.size + gapWidth
+        val viewportWidth = if (maxWidth.value.isFinite()) maxWidth else 0.dp
+        val rowWidth = maxOf(viewportWidth, contentWidth)
+        Row(Modifier.horizontalScroll(rememberScrollState())) {
+            GlassTabRow(
+                tabs = tabs,
+                selectedIndex = selectedIndex,
+                onSelect = onSelect,
+                backdrop = backdrop,
+                modifier = Modifier
+                    .width(rowWidth)
+                    .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+            )
+        }
+    }
+}
 
 @Composable
 fun CoverImage(
@@ -76,7 +133,7 @@ fun VnRowCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    GlassCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 5.dp),
@@ -140,7 +197,7 @@ fun CharacterRowCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    GlassCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 5.dp),
@@ -198,8 +255,8 @@ fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifi
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(message, color = MiuixTheme.colorScheme.error)
-        Button(onClick = onRetry, colors = ButtonDefaults.buttonColorsPrimary()) {
-            Text("重试")
+        GlassDialogButton(onClick = onRetry, role = GlassDialogButtonRole.Primary) {
+            Text("重试", style = MiuixTheme.textStyles.button)
         }
     }
 }
@@ -230,7 +287,7 @@ fun PosterCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    GlassCard(
         modifier = modifier.width(132.dp),
         insideMargin = PaddingValues(0.dp),
         pressFeedbackType = PressFeedbackType.Tilt,

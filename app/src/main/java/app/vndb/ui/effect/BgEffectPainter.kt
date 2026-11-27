@@ -1,8 +1,8 @@
 package app.vndb.ui.effect
 
 import androidx.compose.ui.graphics.Brush
-import top.yukonga.miuix.kmp.blur.RuntimeShader
-import top.yukonga.miuix.kmp.blur.asBrush
+import top.yukonga.miuix.kmp.material.RuntimeShader
+import top.yukonga.miuix.kmp.material.asBrush
 
 class BgEffectPainter {
     val runtimeShader by lazy {

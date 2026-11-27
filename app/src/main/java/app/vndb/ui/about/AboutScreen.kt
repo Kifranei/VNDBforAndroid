@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +30,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -35,15 +38,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.vndb.BuildConfig
 import app.vndb.ui.effect.BgEffectBackground
+import app.vndb.ui.nav.LocalTopBarCenterObstructionStart
+import app.vndb.ui.nav.LocalTopBarTitleAlpha
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurColors
@@ -51,9 +52,13 @@ import top.yukonga.miuix.kmp.blur.BlurDefaults
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
+import top.yukonga.miuix.kmp.glass.GlassCard
+import top.yukonga.miuix.kmp.glass.GlassCardDefaults
+import top.yukonga.miuix.kmp.glass.GlassIconButton
+import top.yukonga.miuix.kmp.glass.GlassTopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.shader.isRenderEffectSupported
+import top.yukonga.miuix.kmp.icon.glass.ChevronBackward
+import top.yukonga.miuix.kmp.material.isRenderEffectSupported
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -75,23 +80,32 @@ fun AboutScreen(onBack: () -> Unit) {
         }
     }
 
+    val layoutDirection = LocalLayoutDirection.current
+    val topBarTitleAlpha = LocalTopBarTitleAlpha.current
     Scaffold(
         topBar = {
-            SmallTopAppBar(
+            GlassTopAppBar(
                 title = "关于",
                 scrollBehavior = scrollBehavior,
-                color = colorScheme.surface.copy(alpha = scrollProgress.coerceIn(0f, 1f)),
-                titleColor = colorScheme.onSurface.copy(alpha = scrollProgress),
+                expandable = false,
+                titleAlpha = { scrollProgress * topBarTitleAlpha() },
+                backgroundAlpha = { scrollProgress.coerceIn(0f, 1f) },
+                centerObstructionStart = LocalTopBarCenterObstructionStart.current,
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(MiuixIcons.Back, contentDescription = "返回", tint = colorScheme.onSurface)
+                    GlassIconButton(onClick = onBack) {
+                        Icon(MiuixIcons.Glass.ChevronBackward, contentDescription = "返回", tint = colorScheme.onSurface)
                     }
                 },
             )
         },
     ) { innerPadding ->
         AboutContent(
-            padding = PaddingValues(top = innerPadding.calculateTopPadding()),
+            // Keep the side insets so landscape content clears the display cutout and side navigation bar.
+            padding = PaddingValues(
+                start = innerPadding.calculateStartPadding(layoutDirection),
+                top = innerPadding.calculateTopPadding(),
+                end = innerPadding.calculateEndPadding(layoutDirection),
+            ),
             scrollBehavior = scrollBehavior,
             scrollProgress = scrollProgress,
             lazyListState = lazyListState,
@@ -113,6 +127,7 @@ private fun AboutContent(
     val blurEnable by remember { mutableStateOf(isRenderEffectSupported()) }
     val uriHandler = LocalUriHandler.current
     val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
     var logoHeightDp by remember { mutableStateOf(300.dp) }
     val logoLiftPx = with(density) { 96.dp.toPx() }
     val heroTopPadding = 148.dp
@@ -135,7 +150,11 @@ private fun AboutContent(
                     alpha = (1f - scrollProgress * 1.35f).coerceIn(0f, 1f)
                     translationY = -logoLiftPx * scrollProgress
                 }
-                .padding(top = padding.calculateTopPadding() + heroTopPadding)
+                .padding(
+                    start = padding.calculateStartPadding(layoutDirection),
+                    top = padding.calculateTopPadding() + heroTopPadding,
+                    end = padding.calculateEndPadding(layoutDirection),
+                )
                 .onSizeChanged { size -> with(density) { logoHeightDp = size.height.toDp() } },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -178,7 +197,11 @@ private fun AboutContent(
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(top = padding.calculateTopPadding()),
+            contentPadding = PaddingValues(
+                start = padding.calculateStartPadding(layoutDirection),
+                top = padding.calculateTopPadding(),
+                end = padding.calculateEndPadding(layoutDirection),
+            ),
             overscrollEffect = null,
         ) {
             item(key = "logoSpacer") {
@@ -256,7 +279,7 @@ private fun FrostedCard(
     content: @Composable () -> Unit,
 ) {
     val isDark = colorScheme.background.luminance() < 0.5f
-    Card(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
@@ -275,7 +298,7 @@ private fun FrostedCard(
                     Modifier
                 },
             ),
-        colors = CardDefaults.defaultColors(
+        colors = GlassCardDefaults.colors(
             if (blurEnable) {
                 Color.Transparent
             } else if (isDark) {

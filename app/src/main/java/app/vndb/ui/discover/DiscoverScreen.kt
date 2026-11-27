@@ -16,8 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import app.vndb.ui.nav.LocalBottomBarClearance
-import app.vndb.ui.nav.tabContentWindowInsets
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -30,27 +28,36 @@ import app.vndb.ui.components.EmptyState
 import app.vndb.ui.components.ErrorState
 import app.vndb.ui.components.LoadingBox
 import app.vndb.ui.components.PosterCard
+import app.vndb.ui.components.progressiveBlurSource
+import app.vndb.ui.components.rememberProgressiveBlurBackdrop
 import app.vndb.ui.nav.BrowseMode
+import app.vndb.ui.nav.LocalBottomBarClearance
+import app.vndb.ui.nav.sides
+import app.vndb.ui.nav.tabContentWindowInsets
 import app.vndb.ui.vmFactory
 import app.vndb.util.displayTitle
 import app.vndb.util.formatRating
 import app.vndb.util.visibleUrl
+import app.vndb.ui.nav.LocalTopBarCenterObstructionStart
+import app.vndb.ui.nav.LocalTopBarTitleAlpha
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.Card
+import kotlinx.coroutines.supervisorScope
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
+import top.yukonga.miuix.kmp.glass.GlassCard
+import top.yukonga.miuix.kmp.glass.GlassTopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.ChevronForward
+import top.yukonga.miuix.kmp.icon.glass.ChevronForward
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 data class DiscoverUiState(
@@ -75,25 +82,27 @@ class DiscoverViewModel(private val container: AppContainer) : ViewModel() {
     fun refresh(initial: Boolean = false) {
         viewModelScope.launch {
             _state.value = _state.value.copy(loading = initial, refreshing = !initial, error = null)
-            runCatching {
-                val quote = async { runCatching { container.repository.randomQuote() }.getOrNull() }
-                val top = async { container.repository.topRated() }
-                val recent = async { container.repository.recentlyReleased() }
-                val popular = async { container.repository.mostVoted() }
-                val stats = async { runCatching { container.repository.stats() }.getOrNull() }
-                DiscoverUiState(
-                    loading = false,
-                    refreshing = false,
-                    quote = quote.await(),
-                    topRated = top.await().results,
-                    recent = recent.await().results,
-                    popular = popular.await().results,
-                    statsText = stats.await()?.let { "收录 ${it.vn} 部作品 · ${it.chars} 位角色" },
-                )
-            }.onSuccess {
-                _state.value = it
-            }.onFailure {
-                _state.value = _state.value.copy(loading = false, refreshing = false, error = it.message ?: "加载失败")
+            try {
+                _state.value = supervisorScope {
+                    val quote = async { runCatching { container.repository.randomQuote() }.getOrNull() }
+                    val top = async { container.repository.topRated() }
+                    val recent = async { container.repository.recentlyReleased() }
+                    val popular = async { container.repository.mostVoted() }
+                    val stats = async { runCatching { container.repository.stats() }.getOrNull() }
+                    DiscoverUiState(
+                        loading = false,
+                        refreshing = false,
+                        quote = quote.await(),
+                        topRated = top.await().results,
+                        recent = recent.await().results,
+                        popular = popular.await().results,
+                        statsText = stats.await()?.let { "收录 ${it.vn} 部作品 · ${it.chars} 位角色" },
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(loading = false, refreshing = false, error = e.message ?: "加载失败")
             }
         }
     }
@@ -112,13 +121,18 @@ fun DiscoverScreen(
     val pull = rememberPullToRefreshState()
 
     val barClearance = LocalBottomBarClearance.current
+    val blurBackdrop = rememberProgressiveBlurBackdrop()
     Scaffold(
         contentWindowInsets = tabContentWindowInsets(),
         topBar = {
-            TopAppBar(
+            GlassTopAppBar(
                 title = "发现",
                 largeTitle = "发现",
                 scrollBehavior = scroll,
+                progressiveBlur = true,
+                backdrop = blurBackdrop,
+                titleAlpha = LocalTopBarTitleAlpha.current,
+                centerObstructionStart = LocalTopBarCenterObstructionStart.current,
             )
         },
     ) { padding ->
@@ -138,6 +152,8 @@ fun DiscoverScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
+                            .progressiveBlurSource(blurBackdrop)
+                            .padding(padding.sides())
                             .nestedScroll(scroll.nestedScrollConnection),
                         contentPadding = PaddingValues(
                             top = padding.calculateTopPadding(),
@@ -188,7 +204,7 @@ fun DiscoverScreen(
 
 @Composable
 private fun QuoteCard(quote: Quote, settings: UserSettings, onOpenVn: (String) -> Unit) {
-    Card(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp),
@@ -232,7 +248,7 @@ private fun Rail(
             SmallTitle(title, modifier = Modifier.weight(1f))
             IconButton(onClick = onMore) {
                 Icon(
-                    imageVector = MiuixIcons.ChevronForward,
+                    imageVector = MiuixIcons.Glass.ChevronForward,
                     contentDescription = "更多",
                     tint = MiuixTheme.colorScheme.onBackgroundVariant,
                 )

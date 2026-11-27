@@ -11,13 +11,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import app.vndb.ui.nav.LocalTopBarCenterObstructionStart
+import app.vndb.ui.nav.LocalTopBarTitleAlpha
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.glass.GlassIconButton
+import top.yukonga.miuix.kmp.glass.GlassTopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.glass.ChevronBackward
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -29,11 +31,14 @@ fun GalleryScreen(
     val pager = rememberPagerState(initialPage = start.coerceIn(0, (urls.size - 1).coerceAtLeast(0))) { urls.size }
     Scaffold(
         topBar = {
-            SmallTopAppBar(
+            GlassTopAppBar(
                 title = if (urls.isEmpty()) "截图" else "${pager.currentPage + 1} / ${urls.size}",
+                expandable = false,
+                titleAlpha = LocalTopBarTitleAlpha.current,
+                centerObstructionStart = LocalTopBarCenterObstructionStart.current,
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(MiuixIcons.Back, contentDescription = "返回")
+                    GlassIconButton(onClick = onBack) {
+                        Icon(MiuixIcons.Glass.ChevronBackward, contentDescription = "返回")
                     }
                 },
             )

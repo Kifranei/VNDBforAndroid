@@ -1,6 +1,6 @@
 # VNDB for Android
 
-非官方 VNDB 客户端，界面使用 [Miuix](https://github.com/compose-miuix-ui/miuix)（HyperOS 风格）。
+非官方 VNDB 客户端，界面使用 [Miuix](https://github.com/compose-miuix-ui/miuix) 的 OS4 Glass 组件。
 
 数据来自 [VNDB API v2 (Kana)](https://api.vndb.org/kana)。
 
@@ -9,17 +9,17 @@
 ## 功能
 
 - 发现：随机摘录、高分 / 最近发售 / 最多评分
-- 搜索：作品、角色、制作组、职员、标签
+- 搜索：作品、角色、制作组、职员、标签（独立搜索按钮与全屏搜索浮层）
 - 作品筛选：语言、平台、评分、时长、发售区间、`devstatus`、`has_description`
 - 作品详情：评分、标签、简介、截图、角色、发行、相关作品
 - 角色 / 制作组 / 职员 / 标签详情
-- 本地收藏与浏览记录
+- 浏览记录
 - 可选 VNDB Token，同步个人列表（`POST /ulist`）
 - 标题语言、敏感封面、剧透等级、浅色 / 深色 / 莫奈主题
 
 ## 构建
 
-需要 JDK 17+ 与 Android SDK。仓库默认使用本机：
+需要 JDK 17+ 与 Android SDK（compileSdk 37.2）。仓库默认使用本机：
 
 ```
 C:\Program Files\Microsoft\jdk-21.0.7.6-hotspot
